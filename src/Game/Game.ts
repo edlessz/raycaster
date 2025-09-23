@@ -1,6 +1,17 @@
+import { initializeInput } from "./Input";
+import Player from "./Player";
+import World from "./World";
+
 class Game {
+	constructor() {
+		initializeInput();
+	}
+
 	private viewport: HTMLCanvasElement | null = null;
 	private context: CanvasRenderingContext2D | null = null;
+
+	private world = new World();
+	private player = new Player(1.5, 1.5, 0);
 
 	private resizeObserver = new ResizeObserver(this.handleResize.bind(this));
 
@@ -59,7 +70,7 @@ class Game {
 	}
 
 	private update(deltaTime: number): void {
-		void deltaTime;
+		this.player.update(deltaTime, this.world.getMapData());
 	}
 	private render(g: CanvasRenderingContext2D): void {
 		if (!this.viewport) return;
@@ -67,8 +78,11 @@ class Game {
 		g.resetTransform();
 		g.clearRect(0, 0, this.viewport.width, this.viewport.height);
 
-		g.fillStyle = "black";
-		g.fillRect(0, 0, 32, 32);
+		const ppu = 64;
+		g.scale(ppu, ppu);
+
+		this.world.render(g);
+		this.player.render(g);
 	}
 }
 
