@@ -1,17 +1,45 @@
+import type { Texture, TextureMap } from "../types";
 import { initializeInput } from "./Input";
 import Player from "./Player";
+import { drawRays } from "./RayDraw";
 import World from "./World";
 
 class Game {
 	constructor() {
 		initializeInput();
+		this.loadTexture(1, "brick.png");
+		this.loadTexture(2, "nik.png");
+		this.loadTexture(3, "michael.png");
 	}
 
 	private viewport: HTMLCanvasElement | null = null;
 	private context: CanvasRenderingContext2D | null = null;
 
+	private textureMap: TextureMap = new Map<number, Texture>();
+	private loadTexture(id: number, src: string): void {
+		const img = new Image();
+		img.src = src;
+		const canvas = document.createElement("canvas");
+		img.onload = () => {
+			canvas.width = img.width;
+			canvas.height = img.height;
+			const ctx = canvas.getContext("2d");
+			if (ctx) ctx.drawImage(img, 0, 0);
+			const data = ctx?.getImageData(0, 0, canvas.width, canvas.height).data;
+			if (data)
+				this.textureMap.set(id, {
+					width: canvas.width,
+					height: canvas.height,
+					data,
+					img,
+					src: img.src,
+				});
+		};
+	}
+
 	private world = new World();
-	private player = new Player(1.5, 1.5, 0);
+	private player = new Player(1.5, 9.5, 0);
+	private drawOverhead = false;
 
 	private resizeObserver = new ResizeObserver(this.handleResize.bind(this));
 
@@ -78,11 +106,23 @@ class Game {
 		g.resetTransform();
 		g.clearRect(0, 0, this.viewport.width, this.viewport.height);
 
-		const ppu = 64;
-		g.scale(ppu, ppu);
+		if (this.drawOverhead) {
+			const ppu = 64;
+			g.scale(ppu, ppu);
 
-		this.world.render(g);
-		this.player.render(g);
+			this.world.render(g);
+			this.player.render(g);
+		}
+
+		drawRays(g, this.player.rays, this.textureMap);
+
+		g.resetTransform();
+		g.fillStyle = "black";
+		g.fillText(
+			`FPS: ${(1000 / (performance.now() - this.lastTime)).toFixed(2)}`,
+			10,
+			20,
+		);
 	}
 }
 
