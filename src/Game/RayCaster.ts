@@ -12,6 +12,8 @@ export interface Ray {
 }
 
 export class RayCaster {
+	private fog: number = 10;
+
 	public castRays(
 		position: { x: number; y: number },
 		direction: number,
@@ -95,8 +97,17 @@ export class RayCaster {
 		const projDist = width / 2 / Math.tan(fov / 2);
 
 		g.resetTransform();
+		g.globalAlpha = 1;
 		g.imageSmoothingEnabled = false;
-		g.lineWidth = width / rays.length;
+
+		// Draw Floor and Ceiling
+		g.fillStyle = g.createLinearGradient(0, 0, 0, height);
+		g.fillStyle.addColorStop(0, "#000");
+		g.fillStyle.addColorStop(1, "#fff");
+		g.fillRect(0, 0, width, height / 2);
+		g.fillRect(0, height / 2 - 1, width, height / 2);
+
+		g.lineWidth = Math.round(width / rays.length);
 
 		rays.forEach((ray, i) => {
 			if (!ray.face) return;
@@ -106,12 +117,11 @@ export class RayCaster {
 			const textureX = Math.floor(ray.percentage * texture.width);
 
 			const wallHeight = projDist / (ray.correctedDistance ?? 0.0001);
-			const x = i * g.lineWidth;
+			const x = Math.floor(i * g.lineWidth);
 
 			const yTop = height / 2 - wallHeight / 2;
 
-			g.globalAlpha = Math.max(0, 1 - ray.distance / 10);
-
+			g.globalAlpha = Math.min(1, this.fog / (ray.distance * ray.distance));
 			g.drawImage(
 				texture.img,
 				textureX,
@@ -124,8 +134,6 @@ export class RayCaster {
 				wallHeight,
 			);
 		});
-
-		g.globalAlpha = 1;
 	}
 
 	private tileAt(

@@ -13,7 +13,7 @@ class Player {
 	public velocityRotation: number = 0;
 	public rotationSpeed: number = 1;
 
-	public rayCount: number = 3000;
+	public rayCount: number = 500;
 	public fov: number = Math.PI / 2;
 	public rays: Ray[] = [];
 	public renderDistance = 20;
