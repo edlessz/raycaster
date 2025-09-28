@@ -39,7 +39,8 @@ class Game {
 
 	private world = new World();
 	private player = new Player(1.5, 9.5, 0);
-	private drawOverhead = false;
+	private drawOverheadEnabled = false;
+	private drawRaysEnabled = true;
 
 	private resizeObserver = new ResizeObserver(this.handleResize.bind(this));
 
@@ -106,7 +107,7 @@ class Game {
 		g.resetTransform();
 		g.clearRect(0, 0, this.viewport.width, this.viewport.height);
 
-		if (this.drawOverhead) {
+		if (this.drawOverheadEnabled) {
 			const ppu = 64;
 			g.scale(ppu, ppu);
 
@@ -114,7 +115,7 @@ class Game {
 			this.player.render(g);
 		}
 
-		drawRays(g, this.player.rays, this.textureMap);
+		if (this.drawRaysEnabled) drawRays(g, this.player.rays, this.textureMap);
 
 		g.resetTransform();
 		g.fillStyle = "black";
