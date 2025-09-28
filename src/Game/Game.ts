@@ -1,4 +1,4 @@
-import world0 from "../data/world1.json";
+import world0 from "../data/world0.json";
 import { initializeInput } from "./Input";
 import Player from "./Player";
 import { RayCaster, type TextureMap } from "./RayCaster";
