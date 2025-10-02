@@ -1,3 +1,4 @@
+import type { DrawTask } from "../types";
 import type { Texture } from "./TextureManager";
 
 export type TextureMap = Map<number, Texture>;
@@ -15,7 +16,7 @@ export class RayCaster {
 	private fog: number = 10;
 
 	public castRays(
-		position: { x: number; y: number },
+		position: { x: number; z: number },
 		direction: number,
 		fov: number,
 		rayCount: number,
@@ -29,7 +30,7 @@ export class RayCaster {
 			const rayDirY = Math.sin(angle);
 
 			let mapX = Math.floor(position.x);
-			let mapY = Math.floor(position.y);
+			let mapY = Math.floor(position.z);
 
 			const deltaDistX = Math.abs(1 / rayDirX);
 			const deltaDistY = Math.abs(1 / rayDirY);
@@ -39,7 +40,7 @@ export class RayCaster {
 				(rayDirX < 0 ? position.x - mapX : mapX + 1 - position.x) * deltaDistX;
 			const stepY: number = rayDirY < 0 ? -1 : 1;
 			let sideDistY: number =
-				(rayDirY < 0 ? position.y - mapY : mapY + 1 - position.y) * deltaDistY;
+				(rayDirY < 0 ? position.z - mapY : mapY + 1 - position.z) * deltaDistY;
 
 			let hit = false;
 			let side: "x" | "y" = "x";
@@ -64,7 +65,7 @@ export class RayCaster {
 			const perpWallDist =
 				side === "x"
 					? (mapX - position.x + (1 - stepX) / 2) / rayDirX
-					: (mapY - position.y + (1 - stepY) / 2) / rayDirY;
+					: (mapY - position.z + (1 - stepY) / 2) / rayDirY;
 
 			return {
 				angle,
@@ -80,7 +81,7 @@ export class RayCaster {
 							: "north",
 				percentage:
 					side === "x"
-						? (position.y + perpWallDist * rayDirY) % 1
+						? (position.z + perpWallDist * rayDirY) % 1
 						: (position.x + perpWallDist * rayDirX) % 1,
 				material: this.tileAt(mapX, mapY, map) ?? 0,
 			};
@@ -91,7 +92,7 @@ export class RayCaster {
 		g: CanvasRenderingContext2D,
 		rays: Ray[],
 		textureMap: TextureMap,
-	): void {
+	): DrawTask[] {
 		const { width, height } = g.canvas;
 		const fov = Math.PI / 2;
 		const projDist = width / 2 / Math.tan(fov / 2);
@@ -109,31 +110,42 @@ export class RayCaster {
 
 		g.lineWidth = Math.round(width / rays.length);
 
-		rays.forEach((ray, i) => {
-			if (!ray.face) return;
+		return rays
+			.map<DrawTask | null>((ray, i) => {
+				if (!ray.face) return null;
 
-			const texture = textureMap.get(ray.material);
-			if (!texture) return;
-			const textureX = Math.floor(ray.percentage * texture.width);
+				const texture = textureMap.get(ray.material);
+				if (!texture) return null;
+				const textureX = Math.floor(ray.percentage * texture.width);
 
-			const wallHeight = projDist / (ray.correctedDistance ?? 0.0001);
-			const x = Math.floor(i * g.lineWidth);
+				const wallHeight = projDist / (ray.correctedDistance ?? 0.0001);
+				const x = Math.floor(i * g.lineWidth);
 
-			const yTop = height / 2 - wallHeight / 2;
+				const yTop = height / 2 - wallHeight / 2;
 
-			g.globalAlpha = Math.min(1, this.fog / (ray.distance * ray.distance));
-			g.drawImage(
-				texture.img,
-				textureX,
-				0,
-				1,
-				texture.height,
-				x,
-				yTop,
-				g.lineWidth,
-				wallHeight,
-			);
-		});
+				return {
+					zIndex: ray.distance,
+					fn: (g: CanvasRenderingContext2D) => {
+						g.globalAlpha = 1;
+						g.drawImage(
+							texture.img,
+							textureX,
+							0,
+							1,
+							texture.height,
+							x,
+							yTop,
+							g.lineWidth,
+							wallHeight,
+						);
+						g.globalAlpha = Math.min(
+							1,
+							this.fog / (ray.distance * ray.distance),
+						);
+					},
+				};
+			})
+			.filter((task): task is DrawTask => task !== null);
 	}
 
 	private tileAt(

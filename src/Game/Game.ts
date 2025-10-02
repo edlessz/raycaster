@@ -1,7 +1,10 @@
 import world0 from "../data/world0.json";
+import Camera from "./Camera";
+import Jonas from "./Entities/Jonas";
+import Player from "./Entities/Player";
+import type Entity from "./Entity";
 import { initializeInput } from "./Input";
-import Player from "./Player";
-import { RayCaster, type TextureMap } from "./RayCaster";
+import type { TextureMap } from "./RayCaster";
 import { loadTextures, type Texture } from "./TextureManager";
 import World from "./World";
 
@@ -13,11 +16,9 @@ class Game {
 
 	private textureMap: TextureMap = new Map<number, Texture>();
 	private world = new World();
-	private player = new Player(1.5, 9.5, 0);
-	private rayCaster = new RayCaster();
-
-	private drawOverheadEnabled = false;
-	private drawRaysEnabled = true;
+	private camera = new Camera(1.5, 9.5);
+	private player = new Player();
+	private entities: Entity[] = [this.player, new Jonas()];
 
 	constructor() {
 		initializeInput();
@@ -28,6 +29,10 @@ class Game {
 		});
 
 		this.world.setMapData(new Map(Object.entries(world0)));
+		this.camera.pov = this.player;
+		this.camera.mapRef = this.world.getMapData();
+		this.camera.textureMapRef = this.textureMap;
+		this.player.mapRef = this.world.getMapData();
 	}
 
 	private handleResize(entries: ResizeObserverEntry[]): void {
@@ -67,6 +72,11 @@ class Game {
 	public start(): void {
 		this.lastTime = performance.now();
 		requestAnimationFrame(this.gameLoop.bind(this));
+
+		this.camera.setup();
+		this.entities.forEach((e) => {
+			e.setup();
+		});
 	}
 
 	private gameLoop(now: number): void {
@@ -85,7 +95,10 @@ class Game {
 	}
 
 	private update(deltaTime: number): void {
-		this.player.update(deltaTime, this.world.getMapData());
+		this.entities.forEach((e) => {
+			e.update(deltaTime);
+		});
+		this.camera.update();
 	}
 	private render(g: CanvasRenderingContext2D): void {
 		if (!this.viewport) return;
@@ -93,16 +106,16 @@ class Game {
 		g.resetTransform();
 		g.clearRect(0, 0, this.viewport.width, this.viewport.height);
 
-		if (this.drawOverheadEnabled) {
-			const ppu = 64;
-			g.scale(ppu, ppu);
+		const tasks = [
+			...this.camera.render(g),
+			...this.entities.map((e) => e.internalRender(this.camera)),
+		];
 
-			this.world.render(g);
-			this.player.render(g);
-		}
-
-		if (this.drawRaysEnabled)
-			this.rayCaster.render(g, this.player.rays, this.textureMap);
+		tasks
+			.sort((a, b) => b.zIndex - a.zIndex)
+			.forEach((task) => {
+				task.fn(g);
+			});
 
 		g.resetTransform();
 		g.fillStyle = "black";
