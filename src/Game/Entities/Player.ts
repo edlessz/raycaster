@@ -26,19 +26,21 @@ class Player extends Entity {
 		return !!this.tileAt(this.x, this.z, map);
 	}
 	public update(deltaTime: number): void {
-		if (isKeyPressed("ArrowUp")) {
+		if (isKeyPressed("w")) {
 			this.velocityX += Math.cos(this.rotation) * deltaTime * this.moveSpeed;
 			this.velocityZ += Math.sin(this.rotation) * deltaTime * this.moveSpeed;
 		}
-		if (isKeyPressed("ArrowDown")) {
+		if (isKeyPressed("s")) {
 			this.velocityX -= Math.cos(this.rotation) * deltaTime * this.moveSpeed;
 			this.velocityZ -= Math.sin(this.rotation) * deltaTime * this.moveSpeed;
 		}
-		if (isKeyPressed("ArrowLeft")) {
-			this.velocityRotation -= deltaTime * this.rotationSpeed;
+		if (isKeyPressed("a")) {
+			this.velocityX += Math.sin(this.rotation) * deltaTime * this.moveSpeed;
+			this.velocityZ -= Math.cos(this.rotation) * deltaTime * this.moveSpeed;
 		}
-		if (isKeyPressed("ArrowRight")) {
-			this.velocityRotation += deltaTime * this.rotationSpeed;
+		if (isKeyPressed("d")) {
+			this.velocityX -= Math.sin(this.rotation) * deltaTime * this.moveSpeed;
+			this.velocityZ += Math.cos(this.rotation) * deltaTime * this.moveSpeed;
 		}
 
 		const map = this.mapRef;
@@ -57,17 +59,6 @@ class Player extends Entity {
 		}
 		this.velocityRotation *= 0.7;
 		this.rotation += this.velocityRotation;
-	}
-
-	public render(
-		g: CanvasRenderingContext2D,
-		x: number,
-		y: number,
-		width: number,
-		height: number,
-	): void {
-		g.fillStyle = "green";
-		g.fillRect(x, y, width, height);
 	}
 }
 

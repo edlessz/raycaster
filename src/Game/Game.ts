@@ -18,6 +18,7 @@ class Game {
 	private world = new World();
 	private camera = new Camera(1.5, 9.5);
 	private player = new Player();
+
 	private entities: Entity[] = [this.player, new Jonas()];
 
 	constructor() {
@@ -51,16 +52,26 @@ class Game {
 		this.render(this.context);
 	}
 
+	public rotateCamera = (mouseEvent: MouseEvent): void => {
+		const amt = (mouseEvent.movementX * this.player.rotationSpeed) / 250;
+		this.player.rotation += amt;
+	};
+
 	public setViewport(canvas: HTMLCanvasElement | null): void {
 		if (this.viewport) {
 			// Unhook
 			this.resizeObserver.unobserve(this.viewport);
+			this.viewport.removeEventListener("mousemove", this.rotateCamera);
 		}
 		this.viewport = canvas;
 		this.context = canvas?.getContext("2d") ?? null;
 		if (canvas) {
 			// Hook
 			this.resizeObserver.observe(canvas);
+			canvas.addEventListener("mousemove", this.rotateCamera);
+			canvas.addEventListener("click", () => {
+				canvas.requestPointerLock();
+			});
 		}
 	}
 
@@ -95,10 +106,10 @@ class Game {
 	}
 
 	private update(deltaTime: number): void {
+		this.camera.update();
 		this.entities.forEach((e) => {
 			e.update(deltaTime);
 		});
-		this.camera.update();
 	}
 	private render(g: CanvasRenderingContext2D): void {
 		if (!this.viewport) return;
