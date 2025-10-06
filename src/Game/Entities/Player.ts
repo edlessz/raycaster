@@ -1,5 +1,7 @@
 import Entity from "../Entity";
 import { isKeyPressed } from "../Input";
+import { inject } from "../Registry";
+import type World from "../World";
 
 class Player extends Entity {
 	public velocityX: number = 0;
@@ -15,6 +17,11 @@ class Player extends Entity {
 		super(1.5, 0, 9.5, 0.5, 0.5);
 	}
 
+	public setup(): void {
+		const world = inject<World>("world");
+		if (world) this.mapRef = world.getMapData();
+	}
+
 	public tileAt(
 		x: number,
 		y: number,
@@ -22,8 +29,9 @@ class Player extends Entity {
 	): number | undefined {
 		return map.get(`${Math.floor(x)},${Math.floor(y)}`);
 	}
-	public colliding(map: Map<string, number>): boolean {
-		return !!this.tileAt(this.x, this.z, map);
+	public colliding(): boolean {
+		if (!this.mapRef) return false;
+		return !!this.tileAt(this.x, this.z, this.mapRef);
 	}
 	public update(deltaTime: number): void {
 		if (isKeyPressed("w")) {
@@ -43,17 +51,15 @@ class Player extends Entity {
 			this.velocityZ += Math.cos(this.rotation) * deltaTime * this.moveSpeed;
 		}
 
-		const map = this.mapRef;
-
 		this.velocityX *= 0.85;
 		this.velocityZ *= 0.85;
 		this.x += this.velocityX;
-		while (map && this.colliding(map)) {
+		while (this.colliding()) {
 			this.x -= this.velocityX;
 			this.velocityX = 0;
 		}
 		this.z += this.velocityZ;
-		while (map && this.colliding(map)) {
+		while (this.colliding()) {
 			this.z -= this.velocityZ;
 			this.velocityZ = 0;
 		}

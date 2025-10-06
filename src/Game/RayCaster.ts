@@ -97,7 +97,6 @@ export class RayCaster {
 		const fov = Math.PI / 2;
 		const projDist = width / 2 / Math.tan(fov / 2);
 
-		g.resetTransform();
 		g.globalAlpha = 1;
 		g.imageSmoothingEnabled = false;
 
@@ -126,6 +125,7 @@ export class RayCaster {
 				return {
 					zIndex: ray.distance,
 					fn: (g: CanvasRenderingContext2D) => {
+						g.resetTransform();
 						g.globalAlpha = 1;
 						g.drawImage(
 							texture.img,

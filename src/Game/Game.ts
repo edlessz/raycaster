@@ -1,25 +1,27 @@
 import world0 from "../data/world0.json";
-import Camera from "./Camera";
+import type { DrawTask } from "../types";
+import Camera from "./Entities/Camera";
 import Jonas from "./Entities/Jonas";
 import Player from "./Entities/Player";
 import type Entity from "./Entity";
 import { initializeInput } from "./Input";
-import type { TextureMap } from "./RayCaster";
+import { RayCaster, type TextureMap } from "./RayCaster";
+import { provide } from "./Registry";
 import { loadTextures, type Texture } from "./TextureManager";
 import World from "./World";
 
 class Game {
 	private viewport: HTMLCanvasElement | null = null;
 	private context: CanvasRenderingContext2D | null = null;
-
 	private resizeObserver = new ResizeObserver(this.handleResize.bind(this));
 
-	private textureMap: TextureMap = new Map<number, Texture>();
 	private world = new World();
+	private rayCaster = new RayCaster();
+	private textureMap: TextureMap = new Map<number, Texture>();
+
 	private camera = new Camera(1.5, 9.5);
 	private player = new Player();
-
-	private entities: Entity[] = [this.player, new Jonas()];
+	private entities: Entity[] = [this.camera, this.player, new Jonas()];
 
 	constructor() {
 		initializeInput();
@@ -29,11 +31,12 @@ class Game {
 			});
 		});
 
+		console.log("Providing...");
+		provide("game", this);
+		provide("world", this.world);
+		provide("player", this.player);
+
 		this.world.setMapData(new Map(Object.entries(world0)));
-		this.camera.pov = this.player;
-		this.camera.mapRef = this.world.getMapData();
-		this.camera.textureMapRef = this.textureMap;
-		this.player.mapRef = this.world.getMapData();
 	}
 
 	private handleResize(entries: ResizeObserverEntry[]): void {
@@ -50,6 +53,13 @@ class Game {
 
 		if (!this.context) return;
 		this.render(this.context);
+	}
+
+	public getEntity<T extends Entity>(type: new () => T): T | null {
+		for (const e of this.entities) {
+			if (e instanceof type) return e as T;
+		}
+		return null;
 	}
 
 	public rotateCamera = (mouseEvent: MouseEvent): void => {
@@ -117,9 +127,18 @@ class Game {
 		g.resetTransform();
 		g.clearRect(0, 0, this.viewport.width, this.viewport.height);
 
-		const tasks = [
-			...this.camera.render(g),
-			...this.entities.map((e) => e.internalRender(this.camera)),
+		const rays = this.rayCaster.castRays(
+			{ x: this.camera.x, z: this.camera.z },
+			this.camera.rotation,
+			this.camera.fov,
+			this.camera.rayCount,
+			this.camera.renderDistance,
+			this.world.getMapData(),
+		);
+
+		const tasks: DrawTask[] = [
+			...this.rayCaster.render(g, rays, this.textureMap),
+			...this.entities.map((e) => this.calculateEntityDrawTask(e)),
 		];
 
 		tasks
@@ -130,11 +149,64 @@ class Game {
 
 		g.resetTransform();
 		g.fillStyle = "black";
+		g.filter = "invert(1)";
+		g.font = "16px monospace";
 		g.fillText(
 			`FPS: ${(1000 / (performance.now() - this.lastTime)).toFixed(2)}`,
 			10,
 			20,
 		);
+		g.filter = "none";
+	}
+
+	private calculateEntityDrawTask(e: Entity): DrawTask {
+		if (e.space === "screen")
+			return {
+				zIndex: e.z,
+				fn: (g: CanvasRenderingContext2D) => {
+					g.resetTransform();
+					e.render(g);
+				},
+			};
+
+		return {
+			zIndex: Math.hypot(this.camera.x - e.x, this.camera.z - e.z),
+			fn: (g: CanvasRenderingContext2D) => {
+				g.globalAlpha = 1;
+
+				const angleToEntity = Math.atan2(
+					e.z - this.camera.z,
+					e.x - this.camera.x,
+				);
+				let angleDiff = angleToEntity - this.camera.rotation;
+
+				while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+				while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+
+				if (Math.abs(angleDiff) < this.camera.fov / 2) {
+					const dx = e.x - this.camera.x;
+					const dz = e.z - this.camera.z;
+					const correctedDistance = Math.cos(angleDiff) * Math.hypot(dx, dz);
+
+					const wallHeight = g.canvas.height / correctedDistance;
+					const projectedWidth = e.width * wallHeight;
+					const projectedHeight = e.height * wallHeight;
+
+					const screenX =
+						g.canvas.width / 2 +
+						Math.tan(angleDiff) *
+							(g.canvas.width / 2 / Math.tan(this.camera.fov / 2)) -
+						projectedWidth / 2;
+					const screenY = g.canvas.height / 2 - projectedHeight;
+
+					g.resetTransform();
+					g.translate(screenX + projectedWidth / 2, screenY + projectedHeight);
+					g.scale(projectedWidth, projectedHeight);
+					g.translate(-0.5, 0);
+					e.render(g);
+				}
+			},
+		};
 	}
 }
 

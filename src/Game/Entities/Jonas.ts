@@ -1,5 +1,5 @@
-import type Camera from "../Camera";
 import Entity from "../Entity";
+import type Camera from "./Camera";
 
 class Jonas extends Entity {
 	public target: Camera | null = null;
@@ -19,16 +19,10 @@ class Jonas extends Entity {
 			this.z += Math.sin(direction) * speed;
 		}
 	}
-
-	public render(
-		g: CanvasRenderingContext2D,
-		x: number,
-		y: number,
-		width: number,
-		height: number,
-	): void {
+	public render(g: CanvasRenderingContext2D): void {
+		this.space = "world";
 		g.fillStyle = "#1E90FF";
-		g.fillRect(x, y, width, height);
+		g.fillRect(0, 0, 1, 1);
 	}
 }
 
