@@ -1,6 +1,4 @@
 import Entity from "../Entity";
-import type Game from "../Game";
-import { inject } from "../Registry";
 import Player from "./Player";
 
 class Camera extends Entity {
@@ -15,9 +13,7 @@ class Camera extends Entity {
 	}
 
 	public setup(): void {
-		const game = inject<Game>("game");
-		console.log(game?.getEntity(Player));
-		const player = game?.getEntity(Player);
+		const player = this.game?.getEntity(Player);
 		if (player) this.pov = player;
 	}
 

@@ -1,4 +1,9 @@
+import type Game from "./Game";
+
 class Entity {
+	public game: Game | null = null;
+	public tag?: string;
+
 	public x: number = 1;
 	public y: number = 0;
 	public z: number = 1;

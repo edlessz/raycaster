@@ -5,9 +5,8 @@ import Jonas from "./Entities/Jonas";
 import Player from "./Entities/Player";
 import type Entity from "./Entity";
 import { initializeInput } from "./Input";
-import { RayCaster, type TextureMap } from "./RayCaster";
-import { provide } from "./Registry";
-import { loadTextures, type Texture } from "./TextureManager";
+import { RayCaster } from "./RayCaster";
+import { loadTextures } from "./TextureManager";
 import World from "./World";
 
 class Game {
@@ -15,9 +14,8 @@ class Game {
 	private context: CanvasRenderingContext2D | null = null;
 	private resizeObserver = new ResizeObserver(this.handleResize.bind(this));
 
-	private world = new World();
+	public world = new World();
 	private rayCaster = new RayCaster();
-	private textureMap: TextureMap = new Map<number, Texture>();
 
 	private camera = new Camera(1.5, 9.5);
 	private player = new Player();
@@ -27,14 +25,9 @@ class Game {
 		initializeInput();
 		loadTextures(["brick.png", "nik.png", "michael.png"]).then((texs) => {
 			texs.forEach((tex, i) => {
-				this.textureMap.set(i + 1, tex);
+				this.rayCaster.textureMap.set(i + 1, tex);
 			});
 		});
-
-		console.log("Providing...");
-		provide("game", this);
-		provide("world", this.world);
-		provide("player", this.player);
 
 		this.world.setMapData(new Map(Object.entries(world0)));
 	}
@@ -61,6 +54,12 @@ class Game {
 		}
 		return null;
 	}
+	public getEntityByTag(tag: string): Entity | null {
+		return this.entities.find((e) => e.tag === tag) ?? null;
+	}
+	public getEntitiesByTag(tag: string): Entity[] {
+		return this.entities.filter((e) => e.tag === tag);
+	}
 
 	public rotateCamera = (mouseEvent: MouseEvent): void => {
 		const amt = (mouseEvent.movementX * this.player.rotationSpeed) / 250;
@@ -85,10 +84,6 @@ class Game {
 		}
 	}
 
-	public getContext(): CanvasRenderingContext2D | null {
-		return this.context;
-	}
-
 	private lastTime: number = 0;
 	public start(): void {
 		this.lastTime = performance.now();
@@ -96,6 +91,7 @@ class Game {
 
 		this.camera.setup();
 		this.entities.forEach((e) => {
+			e.game = this;
 			e.setup();
 		});
 	}
@@ -118,6 +114,7 @@ class Game {
 	private update(deltaTime: number): void {
 		this.camera.update();
 		this.entities.forEach((e) => {
+			e.game = this;
 			e.update(deltaTime);
 		});
 	}
@@ -133,11 +130,11 @@ class Game {
 			this.camera.fov,
 			this.camera.rayCount,
 			this.camera.renderDistance,
-			this.world.getMapData(),
+			this.world,
 		);
 
 		const tasks: DrawTask[] = [
-			...this.rayCaster.render(g, rays, this.textureMap),
+			...this.rayCaster.render(g, rays),
 			...this.entities.map((e) => this.calculateEntityDrawTask(e)),
 		];
 

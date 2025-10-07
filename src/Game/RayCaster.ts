@@ -1,5 +1,6 @@
 import type { DrawTask } from "../types";
 import type { Texture } from "./TextureManager";
+import type World from "./World";
 
 export type TextureMap = Map<number, Texture>;
 
@@ -13,7 +14,13 @@ export interface Ray {
 }
 
 export class RayCaster {
-	private fog: number = 10;
+	public textureMap: TextureMap = new Map();
+	public fog: number = 10;
+
+	constructor(fog: number = 10, textureMap?: TextureMap) {
+		this.fog = fog;
+		if (textureMap) this.textureMap = textureMap;
+	}
 
 	public castRays(
 		position: { x: number; z: number },
@@ -21,7 +28,7 @@ export class RayCaster {
 		fov: number,
 		rayCount: number,
 		renderDistance: number,
-		map: Map<string, number>,
+		worldRef: World,
 	): Ray[] {
 		return Array.from({ length: rayCount }, (_, i) => {
 			const angle = direction - fov / 2 + i * (fov / rayCount);
@@ -57,7 +64,7 @@ export class RayCaster {
 					side = "y";
 				}
 
-				if (this.tileAt(mapX, mapY, map)) hit = true;
+				if (worldRef.tileAt(mapX, mapY)) hit = true;
 				steps++;
 				if (steps > renderDistance) break;
 			}
@@ -83,16 +90,12 @@ export class RayCaster {
 					side === "x"
 						? (position.z + perpWallDist * rayDirY) % 1
 						: (position.x + perpWallDist * rayDirX) % 1,
-				material: this.tileAt(mapX, mapY, map) ?? 0,
+				material: worldRef.tileAt(mapX, mapY) ?? 0,
 			};
 		});
 	}
 
-	public render(
-		g: CanvasRenderingContext2D,
-		rays: Ray[],
-		textureMap: TextureMap,
-	): DrawTask[] {
+	public render(g: CanvasRenderingContext2D, rays: Ray[]): DrawTask[] {
 		const { width, height } = g.canvas;
 		const fov = Math.PI / 2;
 		const projDist = width / 2 / Math.tan(fov / 2);
@@ -113,7 +116,7 @@ export class RayCaster {
 			.map<DrawTask | null>((ray, i) => {
 				if (!ray.face) return null;
 
-				const texture = textureMap.get(ray.material);
+				const texture = this.textureMap.get(ray.material);
 				if (!texture) return null;
 				const textureX = Math.floor(ray.percentage * texture.width);
 
@@ -146,13 +149,5 @@ export class RayCaster {
 				};
 			})
 			.filter((task): task is DrawTask => task !== null);
-	}
-
-	private tileAt(
-		x: number,
-		y: number,
-		map: Map<string, number>,
-	): number | undefined {
-		return map.get(`${Math.floor(x)},${Math.floor(y)}`);
 	}
 }

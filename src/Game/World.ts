@@ -7,6 +7,9 @@ class World {
 	public getMapData(): Map<string, number> {
 		return this.data;
 	}
+	public tileAt(x: number, y: number): number | null {
+		return this.data.get(`${Math.floor(x)},${Math.floor(y)}`) ?? null;
+	}
 }
 
 export default World;
