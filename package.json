@@ -6,8 +6,9 @@
 	"scripts": {
 		"dev": "vite",
 		"build": "tsc -b && vite build",
-		"lint": "npx biome check --fix",
-		"preview": "vite preview"
+		"check": "npx biome check --fix",
+		"preview": "vite preview",
+		"prepare": "npx husky"
 	},
 	"dependencies": {
 		"react": "^19.2.0",
@@ -15,9 +16,12 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.2.5",
+		"@commitlint/cli": "^20.1.0",
+		"@commitlint/config-conventional": "^20.0.0",
 		"@types/react": "^19.2.2",
 		"@types/react-dom": "^19.2.1",
 		"@vitejs/plugin-react-swc": "^4.1.0",
+		"husky": "^9.1.7",
 		"typescript": "~5.9.3",
 		"vite": "^7.1.9"
 	}
